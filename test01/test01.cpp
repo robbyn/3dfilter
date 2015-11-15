@@ -62,6 +62,7 @@ main(int argc, char** argv)
 	double R = 2.5;
 	double r = 0.1;
 	int neighbours = 5;
+	bool out = false;
 	int st = 0;
 	for (int i = 1; i < argc; ++i)
 	{
@@ -96,10 +97,12 @@ main(int argc, char** argv)
 		case 1:
 			r = atof(arg);
 			st = 0;
+			out = true;
 			break;
 		case 2:
 			neighbours = atoi(arg);
 			st = 0;
+			out = true;
 			break;
 		case 3:
 			yc = atof(arg);
@@ -123,10 +126,13 @@ main(int argc, char** argv)
 	cloud = cylinderCrop(cloud, yc, zc, R);
 	t = clock() - t;
 	std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
-	t = clock();
-	cloud = radiusOutliersRemoval(cloud, r, neighbours);
-	t = clock() - t;
-	std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+	if (out)
+	{
+		t = clock();
+		cloud = radiusOutliersRemoval(cloud, r, neighbours);
+		t = clock() - t;
+		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+	}
 	t = clock();
 	pcl::PLYWriter writer;
 	writer.write("out.ply", *cloud, false, true);
