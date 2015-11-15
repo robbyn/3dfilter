@@ -6,6 +6,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 
 typedef pcl::PointXYZRGBNormal PointT;
 
@@ -47,6 +48,18 @@ radiusOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, double r, int neighbou
 	return cloud2;
 }
 
+pcl::PointCloud<PointT>::Ptr
+statsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, int meank, double threshold)
+{
+	pcl::PointCloud<PointT>::Ptr cloud2(new pcl::PointCloud<PointT>);
+	pcl::StatisticalOutlierRemoval<PointT> filter;
+	filter.setInputCloud(cloud);
+	filter.setMeanK(meank);
+	filter.setStddevMulThresh(threshold);
+	filter.filter(*cloud2);
+	return cloud2;
+}
+
 int
 secs(clock_t t)
 {
@@ -60,9 +73,12 @@ main(int argc, char** argv)
 	double yc = 0.39577119586776877;
 	double zc = 5.765876350413221;
 	double R = 2.5;
+	bool out = false;
 	double r = 0.1;
 	int neighbours = 5;
-	bool out = false;
+	bool stat = false;
+	int meank = 100;
+	double threshold = 1;
 	int st = 0;
 	for (int i = 1; i < argc; ++i)
 	{
@@ -88,6 +104,14 @@ main(int argc, char** argv)
 			else if (strcmp(arg, "--cyl-radius") == 0)
 			{
 				st = 5;
+			}
+			else if (strcmp(arg, "--stat-meank") == 0)
+			{
+				st = 6;
+			}
+			else if (strcmp(arg, "--stat-threshold") == 0)
+			{
+				st = 7;
 			}
 			else
 			{
@@ -116,6 +140,16 @@ main(int argc, char** argv)
 			R = atof(arg);
 			st = 0;
 			break;
+		case 6:
+			meank = atoi(arg);
+			st = 0;
+			stat = true;
+			break;
+		case 7:
+			threshold = atof(arg);
+			st = 0;
+			stat = true;
+			break;
 		}
 	}
 	clock_t t = clock();
@@ -130,6 +164,13 @@ main(int argc, char** argv)
 	{
 		t = clock();
 		cloud = radiusOutliersRemoval(cloud, r, neighbours);
+		t = clock() - t;
+		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+	}
+	if (stat)
+	{
+		t = clock();
+		cloud = statsOutliersRemoval(cloud, meank, threshold);
 		t = clock() - t;
 		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
 	}
