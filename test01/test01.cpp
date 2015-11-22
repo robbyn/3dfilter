@@ -60,6 +60,58 @@ statsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, int meank, double thres
 	return cloud2;
 }
 
+bool
+readChan(const char *fileName, double &yc, double &zc, double &R)
+{
+	std::ifstream ifs;
+	ifs.open(fileName);
+	std::vector<double> ys;
+	std::vector<double> zs;
+	double ysum = 0;
+	double zsum = 0;
+	double count = 0;
+	while (!ifs.eof())
+	{
+		char rest[1024];
+		int n;
+		double x, y, z;
+		ifs >> n;
+		ifs >> x;
+		ifs >> y;
+		ifs >> z;
+		ifs.getline(rest, sizeof rest/sizeof(char));
+		if (ifs.eof())
+		{
+			break;
+		}
+		ys.push_back(y);
+		zs.push_back(z);
+		std::cerr << n << std::endl;
+		++count;
+		ysum += y;
+		zsum += z;
+	}
+	std::cerr << "Number of cameras: " << count << std::endl;
+	if (count == 0)
+	{
+		return false;
+	}
+	yc = ysum / count;
+	zc = zsum / count;
+	double r2sum = 0;
+	for (int i = 0; i < count; ++i)
+	{
+		double dy = ys[i] - yc;
+		double dz = zs[i] - zc;
+		r2sum += dy*dy + dz*dz;
+	}
+	R = sqrt(r2sum/count);
+	std::cerr << "Yc: " << yc << std::endl;
+	std::cerr << "Zc: " << zc << std::endl;
+	std::cerr << "R:  " << R << std::endl;
+	return true;
+}
+
 int
 secs(clock_t t)
 {
@@ -113,6 +165,10 @@ main(int argc, char** argv)
 			{
 				st = 7;
 			}
+			else if (strcmp(arg, "--cameras") == 0)
+			{
+				st = 8;
+			}
 			else
 			{
 				fileName = arg;
@@ -150,14 +206,23 @@ main(int argc, char** argv)
 			st = 0;
 			stat = true;
 			break;
+		case 8:
+			readChan(arg, yc, zc, R);
+			st = 0;
+			break;
 		}
+	}
+	if (!fileName)
+	{
+		std::cerr << "No file to process" << std::endl;
+		return 0;
 	}
 	clock_t t = clock();
 	pcl::PointCloud<PointT>::Ptr cloud = load(fileName);
 	t = clock() - t;
 	std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
 	t = clock();
-	cloud = cylinderCrop(cloud, yc, zc, R);
+	cloud = cylinderCrop(cloud, yc, zc, R/2);
 	t = clock() - t;
 	std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
 	if (out)
