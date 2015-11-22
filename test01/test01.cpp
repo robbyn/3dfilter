@@ -122,6 +122,8 @@ int
 main(int argc, char** argv)
 {
 	const char *fileName = NULL;
+	const char *output = "out.ply";
+	bool cyl = false;
 	double yc = 0.39577119586776877;
 	double zc = 5.765876350413221;
 	double R = 2.5;
@@ -169,6 +171,10 @@ main(int argc, char** argv)
 			{
 				st = 8;
 			}
+			else if (strcmp(arg, "--output") == 0)
+			{
+				st = 9;
+			}
 			else
 			{
 				fileName = arg;
@@ -207,7 +213,11 @@ main(int argc, char** argv)
 			stat = true;
 			break;
 		case 8:
-			readChan(arg, yc, zc, R);
+			cyl = readChan(arg, yc, zc, R);
+			st = 0;
+			break;
+		case 9:
+			output = arg;
 			st = 0;
 			break;
 		}
@@ -221,10 +231,13 @@ main(int argc, char** argv)
 	pcl::PointCloud<PointT>::Ptr cloud = load(fileName);
 	t = clock() - t;
 	std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
-	t = clock();
-	cloud = cylinderCrop(cloud, yc, zc, R/2);
-	t = clock() - t;
-	std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+	if (cyl)
+	{
+		t = clock();
+		cloud = cylinderCrop(cloud, yc, zc, R/2);
+		t = clock() - t;
+		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+	}
 	if (out)
 	{
 		t = clock();
@@ -241,8 +254,8 @@ main(int argc, char** argv)
 	}
 	t = clock();
 	pcl::PLYWriter writer;
-	writer.write("out.ply", *cloud, false, true);
+	writer.write(output, *cloud, false, true);
 	t = clock() - t;
-	std::cerr << secs(t) << " PointCloud written to out.ply" << std::endl;
+	std::cerr << secs(t) << " PointCloud written to " << output << std::endl;
 	return 0;
 }
