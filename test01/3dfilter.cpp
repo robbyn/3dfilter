@@ -7,6 +7,8 @@
 #include <pcl/io/ply_io.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/surface/mls.h>
+#include <pcl/surface/poisson.h>
 
 typedef pcl::PointXYZRGBNormal PointT;
 
@@ -86,7 +88,6 @@ readChan(const char *fileName, double &yc, double &zc, double &R)
 		}
 		ys.push_back(y);
 		zs.push_back(z);
-		std::cerr << n << std::endl;
 		++count;
 		ysum += y;
 		zsum += z;
@@ -106,9 +107,6 @@ readChan(const char *fileName, double &yc, double &zc, double &R)
 		r2sum += dy*dy + dz*dz;
 	}
 	R = sqrt(r2sum/count);
-	std::cerr << "Yc: " << yc << std::endl;
-	std::cerr << "Zc: " << zc << std::endl;
-	std::cerr << "R:  " << R << std::endl;
 	return true;
 }
 
@@ -122,17 +120,26 @@ int
 main(int argc, char** argv)
 {
 	const char *fileName = NULL;
-	const char *output = "out.ply";
+	const char *outCloud = "cloud.ply";
+	const char *outMesh = "mesh.ply";
+
 	bool cyl = false;
 	double yc = 0.39577119586776877;
 	double zc = 5.765876350413221;
 	double R = 2.5;
-	bool out = false;
+	double cylRatio = 0.8;
+
+	bool outliers = false;
 	double r = 0.1;
 	int neighbours = 5;
+
 	bool stat = false;
 	int meank = 100;
 	double threshold = 1;
+
+	bool poisson = false;
+	int poissonDepth;
+
 	int st = 0;
 	for (int i = 1; i < argc; ++i)
 	{
@@ -171,9 +178,21 @@ main(int argc, char** argv)
 			{
 				st = 8;
 			}
-			else if (strcmp(arg, "--output") == 0)
+			else if (strcmp(arg, "--output-cloud") == 0)
 			{
 				st = 9;
+			}
+			else if (strcmp(arg, "--cyl-radius-ratio") == 0)
+			{
+				st = 10;
+			}
+			else if (strcmp(arg, "--poisson-depth") == 0)
+			{
+				st = 11;
+			}
+			else if (strcmp(arg, "--output-mesh") == 0)
+			{
+				st = 12;
 			}
 			else
 			{
@@ -183,12 +202,12 @@ main(int argc, char** argv)
 		case 1:
 			r = atof(arg);
 			st = 0;
-			out = true;
+			outliers = true;
 			break;
 		case 2:
 			neighbours = atoi(arg);
 			st = 0;
-			out = true;
+			outliers = true;
 			break;
 		case 3:
 			yc = atof(arg);
@@ -217,7 +236,23 @@ main(int argc, char** argv)
 			st = 0;
 			break;
 		case 9:
-			output = arg;
+			outCloud = arg;
+			st = 0;
+			break;
+		case 10:
+			cylRatio = atof(arg);
+			if (cylRatio > 1) {
+				cylRatio /= 100.0;
+			}
+			st = 0;
+			break;
+		case 11:
+			poissonDepth = atoi(arg);
+			poisson = true;
+			st = 0;
+			break;
+		case 12:
+			outMesh = arg;
 			st = 0;
 			break;
 		}
@@ -227,19 +262,22 @@ main(int argc, char** argv)
 		std::cerr << "No file to process" << std::endl;
 		return 0;
 	}
+	std::cerr << "Load file: " << fileName << std::endl;
 	clock_t t = clock();
 	pcl::PointCloud<PointT>::Ptr cloud = load(fileName);
 	t = clock() - t;
 	std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
 	if (cyl)
 	{
+		std::cerr << "Cylinder crop, yc: " << yc << ", zc: " << zc << ", R: " << (R*cylRatio) << std::endl;
 		t = clock();
-		cloud = cylinderCrop(cloud, yc, zc, R/2);
+		cloud = cylinderCrop(cloud, yc, zc, R*cylRatio);
 		t = clock() - t;
 		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
 	}
-	if (out)
+	if (outliers)
 	{
+		std::cerr << "Radius outliers removal, r: " << r << ", neighbours: " << neighbours << std::endl;
 		t = clock();
 		cloud = radiusOutliersRemoval(cloud, r, neighbours);
 		t = clock() - t;
@@ -247,15 +285,38 @@ main(int argc, char** argv)
 	}
 	if (stat)
 	{
+		std::cerr << "Stats outliers removal, meanK: " << meank << ", theshold: " << threshold << std::endl;
 		t = clock();
 		cloud = statsOutliersRemoval(cloud, meank, threshold);
 		t = clock() - t;
 		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
 	}
-	t = clock();
-	pcl::PLYWriter writer;
-	writer.write(output, *cloud, false, true);
-	t = clock() - t;
-	std::cerr << secs(t) << " PointCloud written to " << output << std::endl;
+	if (poisson)
+	{
+		std::cerr << "Poisson surface reconstruction, depth: " << poissonDepth << std::endl;
+		t = clock();
+		pcl::Poisson<PointT> poisson;
+		poisson.setDepth(poissonDepth);
+		poisson.setInputCloud(cloud);
+		pcl::PolygonMesh mesh;
+		poisson.performReconstruction(mesh);
+		t = clock() - t;
+		std::cerr << secs(t) << " Mesh has: " << mesh.polygons.size() << " polygons." << std::endl;
+
+		std::cerr << "Write mesh to: " << outMesh << std::endl;
+		t = clock();
+		pcl::io::savePLYFileBinary(outMesh, mesh);
+		t = clock() - t;
+		std::cerr << secs(t) << " Mesh written to " << outMesh << std::endl;
+	}
+	else
+	{
+		std::cerr << "Write PointCloud to: " << outCloud << std::endl;
+		t = clock();
+		pcl::PLYWriter writer;
+		writer.write(outCloud, *cloud, false, true);
+		t = clock() - t;
+		std::cerr << secs(t) << " PointCloud written to " << outCloud << std::endl;
+	}
 	return 0;
 }
