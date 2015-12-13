@@ -92,6 +92,7 @@ readChan(const char *fileName, double &yc, double &zc, double &R)
 		ysum += y;
 		zsum += z;
 	}
+
 	std::cerr << "Number of cameras: " << count << std::endl;
 	if (count == 0)
 	{
@@ -146,12 +147,12 @@ main(int argc, char** argv)
 		const char *arg = *++argv;
 		switch (st) {
 		case 0:
-			if (strcmp(arg, "--out-radius") == 0)
+			if (strcmp(arg, "--outliers-radius") == 0)
 			{
 				st = 1;
 			}
-			else if (strcmp(arg, "--out-neighbours") == 0)
-			{
+			else if (strcmp(arg, "--outliers-neighbours") == 0)
+			{ 
 				st = 2;
 			}
 			else if (strcmp(arg, "--cyl-yc") == 0)
@@ -266,14 +267,14 @@ main(int argc, char** argv)
 	clock_t t = clock();
 	pcl::PointCloud<PointT>::Ptr cloud = load(fileName);
 	t = clock() - t;
-	std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+	std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" <<  std::endl;
 	if (cyl)
 	{
 		std::cerr << "Cylinder crop, yc: " << yc << ", zc: " << zc << ", R: " << (R*cylRatio) << std::endl;
 		t = clock();
 		cloud = cylinderCrop(cloud, yc, zc, R*cylRatio);
 		t = clock() - t;
-		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
 	}
 	if (outliers)
 	{
@@ -281,7 +282,7 @@ main(int argc, char** argv)
 		t = clock();
 		cloud = radiusOutliersRemoval(cloud, r, neighbours);
 		t = clock() - t;
-		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
 	}
 	if (stat)
 	{
@@ -289,7 +290,7 @@ main(int argc, char** argv)
 		t = clock();
 		cloud = statsOutliersRemoval(cloud, meank, threshold);
 		t = clock() - t;
-		std::cerr << secs(t) << " PointCloud has: " << cloud->size() << " data points." << std::endl;
+		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
 	}
 	if (poisson)
 	{
@@ -301,13 +302,13 @@ main(int argc, char** argv)
 		pcl::PolygonMesh mesh;
 		poisson.performReconstruction(mesh);
 		t = clock() - t;
-		std::cerr << secs(t) << " Mesh has: " << mesh.polygons.size() << " polygons." << std::endl;
+		std::cerr << "Mesh has: " << mesh.polygons.size() << " polygons." << " (" << secs(t) << ")" << std::endl;
 
 		std::cerr << "Write mesh to: " << outMesh << std::endl;
 		t = clock();
 		pcl::io::savePLYFileBinary(outMesh, mesh);
 		t = clock() - t;
-		std::cerr << secs(t) << " Mesh written to " << outMesh << std::endl;
+		std::cerr << "Mesh written to " << outMesh << " (" << secs(t) << ")" << std::endl;
 	}
 	else
 	{
@@ -316,7 +317,7 @@ main(int argc, char** argv)
 		pcl::PLYWriter writer;
 		writer.write(outCloud, *cloud, false, true);
 		t = clock() - t;
-		std::cerr << secs(t) << " PointCloud written to " << outCloud << std::endl;
+		std::cerr << "PointCloud written to " << outCloud << " (" << secs(t) << ")" << std::endl;
 	}
 	return 0;
 }
