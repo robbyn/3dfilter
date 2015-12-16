@@ -13,7 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{69973552-B004-439B-8CF8-290DC84E4DAE}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>test01</RootNamespace>
+    <RootNamespace>3dfilter</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
     <ProjectName>3dfilter</ProjectName>
   </PropertyGroup>
