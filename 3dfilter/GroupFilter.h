@@ -8,18 +8,24 @@ public:
 	Group(int n) { count = n; }
 };
 
-template<class PointT>
-class GroupFilter
+template<typename PointT>
+class GroupFilter : public pcl::FilterIndices<PointT>
 {
+protected:
+	typedef typename pcl::FilterIndices<PointT>::PointCloud PointCloud;
+	typedef typename PointCloud::Ptr PointCloudPtr;
+	typedef typename PointCloud::ConstPtr PointCloudConstPtr;
+	typedef typename pcl::search::Search<PointT>::Ptr SearcherPtr;
+
 private:
 	double radius = 0.1;
 	int minCount = 200;
-	pcl::PointCloud<typename PointT> cloud;
 	std::vector<Group*> groups;
 
 public:
-	GroupFilter() {}
-	~GroupFilter()
+	GroupFilter(bool extract_removed_indices = false) :
+		FilterIndices<PointT>::FilterIndices(extract_removed_indices) {}
+	virtual ~GroupFilter()
 	{
 		clearGroups();
 	}
@@ -29,12 +35,15 @@ public:
 
 	int getMinCount() const { return minCount; }
 	void setMinCount(int newValue) { minCount = newValue; }
-	void setInputCloud(pcl::PointCloud<PointT>::Ptr newValue) { cloud = newValue; }
+
+protected:
+	virtual void applyFilter(std::vector<int> &indices) {}
+	virtual void applyFilter(PointCloud &output) {}
 
 private:
 	void clearGroups()
 	{
-		for (std::iterator<Group*> it = groups.begin(); it < groups.end(); ++it)
+		for (std::vector<Group*>::iterator it = groups.begin(); it != groups.end(); ++it)
 		{
 			delete *it;
 		}
@@ -50,7 +59,7 @@ private:
 
 	void removeGroup(Group *g)
 	{
-		for (std::iterator<Group*> it = groups.begin(); it < groups.end(); ++it)
+		for (std::vector<Group*>::iterator it = groups.begin(); it < groups.end(); ++it)
 		{
 			if (*it == g)
 			{

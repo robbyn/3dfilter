@@ -9,6 +9,8 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/surface/mls.h>
 #include <pcl/surface/poisson.h>
+#include <pcl/filters/filter_indices.h>
+#include "GroupFilter.h"
 
 typedef pcl::PointXYZRGBNormal PointT;
 
@@ -319,5 +321,6 @@ main(int argc, char** argv)
 		t = clock() - t;
 		std::cerr << "PointCloud written to " << outCloud << " (" << secs(t) << ")" << std::endl;
 	}
+	GroupFilter<PointT> gf;
 	return 0;
 }
