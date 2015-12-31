@@ -64,6 +64,23 @@ statsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, int meank, double thres
 	return cloud2;
 }
 
+pcl::PointCloud<PointT>::Ptr
+groupsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, double minDist, int minGroupSize)
+{
+	pcl::PointCloud<PointT>::Ptr cloud2(new pcl::PointCloud<PointT>);
+	GroupFilter<PointT> filter;
+	filter.setInputCloud(cloud);
+	filter.setRadius(minDist);
+	filter.setMinCount(minGroupSize);
+	filter.filter(*cloud2);
+	std::vector<Group*> groups = filter.getGroups();
+	for (std::vector<Group*>::const_iterator it = groups.begin(); it != groups.end(); ++it)
+	{
+		std::cerr << "Group size: " << (*it)->count << std::endl;
+	}
+	return cloud2;
+}
+
 bool
 readChan(const char *fileName, double &yc, double &zc, double &R)
 {
@@ -140,6 +157,10 @@ main(int argc, char** argv)
 	int meank = 100;
 	double threshold = 1;
 
+	bool groups = false;
+	double groupDist = 0.1;
+	int groupThreshold = 200;
+
 	bool poisson = false;
 	int poissonDepth;
 
@@ -196,6 +217,14 @@ main(int argc, char** argv)
 			else if (strcmp(arg, "--output-mesh") == 0)
 			{
 				st = 12;
+			}
+			else if (strcmp(arg, "--groups-dist") == 0)
+			{
+				st = 13;
+			}
+			else if (strcmp(arg, "--groups-threshold") == 0)
+			{
+				st = 14;
 			}
 			else
 			{
@@ -258,6 +287,16 @@ main(int argc, char** argv)
 			outMesh = arg;
 			st = 0;
 			break;
+		case 13:
+			groupDist = atof(arg);
+			groups = true;
+			st = 0;
+			break;
+		case 14:
+			groupThreshold = atoi(arg);
+			groups = true;
+			st = 0;
+			break;
 		}
 	}
 	if (!fileName)
@@ -294,6 +333,14 @@ main(int argc, char** argv)
 		t = clock() - t;
 		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
 	}
+	if (groups)
+	{
+		std::cerr << "Groups outliers removal, min distance: " << groupDist << ", theshold: " << groupThreshold << std::endl;
+		t = clock();
+		cloud = groupsOutliersRemoval(cloud, groupDist, groupThreshold);
+		t = clock() - t;
+		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
+	}
 	if (poisson)
 	{
 		std::cerr << "Poisson surface reconstruction, depth: " << poissonDepth << std::endl;
@@ -321,6 +368,5 @@ main(int argc, char** argv)
 		t = clock() - t;
 		std::cerr << "PointCloud written to " << outCloud << " (" << secs(t) << ")" << std::endl;
 	}
-	GroupFilter<PointT> gf;
 	return 0;
 }
