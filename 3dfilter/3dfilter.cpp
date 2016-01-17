@@ -135,7 +135,7 @@ int
 main(int argc, char** argv)
 {
 	const char *fileName = NULL;
-	const char *outCloud = "cloud.ply";
+	const char *outCloud = NULL;
 	const char *outMesh = "mesh.ply";
 
 	bool cyl = false;
@@ -336,6 +336,15 @@ main(int argc, char** argv)
 		t = clock() - t;
 		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
 	}
+	if (outCloud)
+	{
+		std::cerr << "Write PointCloud to: " << outCloud << std::endl;
+		t = clock();
+		pcl::PLYWriter writer;
+		writer.write(outCloud, *cloud, false, true);
+		t = clock() - t;
+		std::cerr << "PointCloud written to " << outCloud << " (" << secs(t) << ")" << std::endl;
+	}
 	if (poisson)
 	{
 		std::cerr << "Poisson surface reconstruction, depth: " << poissonDepth << std::endl;
@@ -353,15 +362,6 @@ main(int argc, char** argv)
 		pcl::io::savePLYFileBinary(outMesh, mesh);
 		t = clock() - t;
 		std::cerr << "Mesh written to " << outMesh << " (" << secs(t) << ")" << std::endl;
-	}
-	else
-	{
-		std::cerr << "Write PointCloud to: " << outCloud << std::endl;
-		t = clock();
-		pcl::PLYWriter writer;
-		writer.write(outCloud, *cloud, false, true);
-		t = clock() - t;
-		std::cerr << "PointCloud written to " << outCloud << " (" << secs(t) << ")" << std::endl;
 	}
 	return 0;
 }
