@@ -68,16 +68,11 @@ pcl::PointCloud<PointT>::Ptr
 groupsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, double minDist, int minGroupSize)
 {
 	pcl::PointCloud<PointT>::Ptr cloud2(new pcl::PointCloud<PointT>);
-	GroupFilter<PointT> filter;
+	pcl::GroupFilter<PointT> filter(minDist,minGroupSize);
 	filter.setInputCloud(cloud);
 	filter.setRadius(minDist);
-	filter.setMinCount(minGroupSize);
+	filter.setMinSize(minGroupSize);
 	filter.filter(*cloud2);
-	std::vector<Group*> groups = filter.getGroups();
-	for (std::vector<Group*>::const_iterator it = groups.begin(); it != groups.end(); ++it)
-	{
-		std::cerr << "Group size: " << (*it)->count << std::endl;
-	}
 	return cloud2;
 }
 
@@ -218,7 +213,7 @@ main(int argc, char** argv)
 			{
 				st = 12;
 			}
-			else if (strcmp(arg, "--groups-dist") == 0)
+			else if (strcmp(arg, "--groups-radius") == 0)
 			{
 				st = 13;
 			}
