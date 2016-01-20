@@ -10,11 +10,8 @@
 #include <pcl/surface/mls.h>
 #include <pcl/surface/poisson.h>
 #include <pcl/filters/filter_indices.h>
-#include <pcl/ModelCoefficients.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
 #include "GroupFilter.h"
+#include "GroundFilter.h"
 
 typedef pcl::PointXYZRGBNormal PointT;
 
@@ -83,44 +80,12 @@ groupsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, double minDist, int mi
 pcl::PointCloud<PointT>::Ptr
 groundRemoval(pcl::PointCloud<PointT>::Ptr cloud, double threshold)
 {
-	pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-	// Create the segmentation object
-	pcl::SACSegmentation<PointT> seg;
-	// Optional
-	seg.setOptimizeCoefficients(true);
-	// Mandatory
-	seg.setModelType(pcl::SACMODEL_PLANE);
-	seg.setMethodType(pcl::SAC_RANSAC);
-	seg.setDistanceThreshold(threshold);
-
-	seg.setInputCloud(cloud);
-	seg.segment(*inliers, *coefficients);
-
-	if (inliers->indices.size() == 0)
-	{
-		std::cerr << "Could not estimate a planar model for the given dataset." << std::endl;
-		return cloud;
-	}
-	else
-	{
-		std::vector<int> removed(inliers->indices);
-		std::cerr << "Number of ground points: " << removed.size() << std::endl;
-		std::cerr << "Model coefficients: " << coefficients->values[0] << " "
-			<< coefficients->values[1] << " "
-			<< coefficients->values[2] << " "
-			<< coefficients->values[3] << std::endl;
-		size_t size = cloud->points.size();
-		for (std::vector<int>::const_iterator it = removed.begin();
-				it != removed.end(); ++it)
-		{
-			PointT &pt((*cloud)[*it]);
-			pt.b = 0;
-			pt.g = 0;
-			pt.r = 255;
-		}
-		return cloud;
-	}
+	pcl::PointCloud<PointT>::Ptr cloud2(new pcl::PointCloud<PointT>);
+	pcl::GroundFilter<PointT> filter;
+	filter.setInputCloud(cloud);
+	filter.setThreshold(threshold);
+	filter.filter(*cloud2);
+	return cloud2;
 }
 
 bool
@@ -387,19 +352,19 @@ main(int argc, char** argv)
 		t = clock() - t;
 		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
 	}
-	if (groups)
-	{
-		std::cerr << "Groups outliers removal, min distance: " << groupDist << ", theshold: " << groupThreshold << std::endl;
-		t = clock();
-		cloud = groupsOutliersRemoval(cloud, groupDist, groupThreshold);
-		t = clock() - t;
-		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
-	}
 	if (ground)
 	{
 		std::cerr << "Ground removal, tolerance: " << groundThreshold << std::endl;
 		t = clock();
 		cloud = groundRemoval(cloud, groundThreshold);
+		t = clock() - t;
+		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
+	}
+	if (groups)
+	{
+		std::cerr << "Groups outliers removal, min distance: " << groupDist << ", theshold: " << groupThreshold << std::endl;
+		t = clock();
+		cloud = groupsOutliersRemoval(cloud, groupDist, groupThreshold);
 		t = clock() - t;
 		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
 	}
