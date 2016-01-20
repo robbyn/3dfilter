@@ -57,22 +57,13 @@ namespace pcl
 				<< coefficients->values[1] << " "
 				<< coefficients->values[2] << " "
 				<< coefficients->values[3] << std::endl;
-			double sgn = coefficients->values[0] < 0 ? -1.0 : 1.0;
-			double cx = sgn*coefficients->values[0];
-			double cy = sgn*coefficients->values[1];
-			double cz = sgn*coefficients->values[2];
-			double d = sgn*coefficients->values[3] + threshold_;
 			size_t size = input_->points.size();
 			std::vector<int> indices;
 			for (int i = 0; i < size; ++i)
 			{
 				if (!binary_search(removed.begin(), removed.end(), i))
 				{
-//					const PointT &pt(input_->at(i));
-//					if (cx*pt.x + cy*pt.y + cz*pt.z + d > 0)
-//					{
-						indices.push_back(i);
-//					}
+					indices.push_back(i);
 				}
 			}
 			copyPointCloud(*input_, indices, output);

@@ -66,13 +66,15 @@ statsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, int meank, double thres
 }
 
 pcl::PointCloud<PointT>::Ptr
-groupsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, double minDist, int minGroupSize)
+groupsOutliersRemoval(pcl::PointCloud<PointT>::Ptr cloud, double minDist,
+	int minGroupSize, int neigbours)
 {
 	pcl::PointCloud<PointT>::Ptr cloud2(new pcl::PointCloud<PointT>);
 	pcl::GroupFilter<PointT> filter(minDist,minGroupSize);
 	filter.setInputCloud(cloud);
 	filter.setRadius(minDist);
 	filter.setMinSize(minGroupSize);
+	filter.setMinNeighbours(neigbours);
 	filter.filter(*cloud2);
 	return cloud2;
 }
@@ -167,6 +169,7 @@ main(int argc, char** argv)
 	bool groups = false;
 	double groupDist = 0.1;
 	int groupThreshold = 200;
+	int groupNeighbours = 0;
 
 	bool ground = false;
 	double groundThreshold = 0.05;
@@ -239,6 +242,10 @@ main(int argc, char** argv)
 			else if (strcmp(arg, "--ground-threshold") == 0)
 			{
 				st = 15;
+			}
+			else if (strcmp(arg, "--groups-neighbours") == 0)
+			{
+				st = 16;
 			}
 			else
 			{
@@ -316,6 +323,11 @@ main(int argc, char** argv)
 			ground = true;
 			st = 0;
 			break;
+		case 16:
+			groupNeighbours = atof(arg);
+			groups = true;
+			st = 0;
+			break;
 		}
 	}
 	if (!fileName)
@@ -362,9 +374,11 @@ main(int argc, char** argv)
 	}
 	if (groups)
 	{
-		std::cerr << "Groups outliers removal, min distance: " << groupDist << ", theshold: " << groupThreshold << std::endl;
+		std::cerr << "Groups outliers removal, min distance: " << groupDist
+			<< ", threshold: " << groupThreshold
+			<< ", neighbours: " << groupNeighbours << std::endl;
 		t = clock();
-		cloud = groupsOutliersRemoval(cloud, groupDist, groupThreshold);
+		cloud = groupsOutliersRemoval(cloud, groupDist, groupThreshold, groupNeighbours);
 		t = clock() - t;
 		std::cerr << "PointCloud has: " << cloud->size() << " data points." << " (" << secs(t) << ")" << std::endl;
 	}

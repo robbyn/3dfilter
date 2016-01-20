@@ -11,11 +11,14 @@ namespace pcl
 	{
 	private:
 		int size = 1;
+		int neighbours = 0;
 		Node *group = this;
 		Node *next = this;
 
 		void setGroup(Node *g);
 	public:
+		int getNeighbours() const { return neighbours; }
+		void setNeighbours(int newValue) { neighbours = newValue; }
 		int groupSize() const { return group->size; }
 		void merge(Node &other);
 	};
@@ -39,9 +42,12 @@ namespace pcl
 		double getRadius() const { return radius_; }
 		void setMinSize(int min_size) { min_size_ = min_size; }
 		int getMinSize() const { return min_size_; }
+		void setMinNeighbours(int value) { min_neighbours_ = value; }
+		int getMinNeighbours() const { return min_neighbours_; }
 	private:
 		double radius_;
 		int min_size_;
+		int min_neighbours_;
 		KdTreePtr tree_;
 
 		void buildGroups(std::vector<Node> &nodes);
@@ -60,7 +66,9 @@ namespace pcl
 		std::vector<int> indices;
 		for (int pid = 0; pid < nodes.size(); ++pid)
 		{
-			if (nodes[pid].groupSize() >= min_size_)
+			const Node &node(nodes[pid]);
+			if (node.getNeighbours() >= min_neighbours_
+				&& node.groupSize() >= min_size_)
 			{
 				indices.push_back(pid);
 			}
@@ -75,7 +83,7 @@ namespace pcl
 		std::vector<float> dists;
 		for (int pid = 0; pid < nodes.size(); ++pid)
 		{
-			tree_->radiusSearch(pid, radius_, indices, dists);
+			nodes[pid].setNeighbours(tree_->radiusSearch(pid, radius_, indices, dists));
 			for (int i = 0; i < indices.size(); ++i)
 			{
 				int id = indices[i];
